@@ -38,3 +38,12 @@ def _parse(lines, currname):
   if buf:
     chunks.append(str.join('\n', buf))
   return chunks
+
+def generate(chunks):
+  return str.join('\n', map(_gen, chunks))
+
+def _gen(chunk):
+  if type(chunk) == type(()):
+    name = chunk[0]
+    return '# --== proj begin %s ==--\n%s\n# --== proj end %s ==--' % (name, generate(chunk[1]), name)
+  return chunk
