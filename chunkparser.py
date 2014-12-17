@@ -38,23 +38,3 @@ def _parse(lines, currname):
   if buf:
     chunks.append(str.join('\n', buf))
   return chunks
-
-def runtests():
-  testdata1 = '''albert
-betty
-carl
-# --== proj begin daniel ==--
-engelbert
-floyd
-# --== proj end daniel ==--
-gillian
-hortice
-'''
-  result1 = parse((l for l in testdata1.split('\n')))
-  if result1 != ['albert\nbetty\ncarl', ('daniel', ['engelbert\nfloyd']), 'gillian\nhortice\n']:
-    print 'FAIL'
-  else:
-    print 'PASS'
-
-if __name__ == '__main__':
-  runtests()
