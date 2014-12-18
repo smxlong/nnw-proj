@@ -6,6 +6,7 @@ import templates
 import os
 import sys
 import re
+import itertools
 
 def usage(exitcode=0):
   print 'usage: unknown'
@@ -55,6 +56,26 @@ def _find_chunk_recursive(chunks, name):
       if c != None:
 	return c
   return None
+
+def _is_plain_chunk(chunk):
+  return type(chunk) != type([])
+
+def _split_nl(data):
+  return data.split('\n')
+
+# Safely add items to the chunk, avoiding duplicates and ignoring whitespace
+def _add_to_chunk(chunk, items, onlyonce=True):
+  if not onlyonce:
+    # Quick addition
+    chunk[1] += items
+    return
+  # Get current list of items in the chunk, stripping surrounding whitespace.
+  # Use filter to ignore sub-chunks
+  currentitems = map(str.strip, itertools.chain(*map(_split_nl, filter(_is_plain_chunk, chunk[1]))))
+  for i in map(str.strip, items):
+    if i not in currentitems:
+      chunk[1].append(i)
+      currentitems.append(i)
 
 def _load_chunks(preflags):
   filename = _get_cmakelists(preflags)
@@ -119,22 +140,26 @@ def cmd_new_executable(preflags, groups):
 def cmd_add(preflags, groups):
   sources = None
   headers = None
+  defines = None
   if '--sources' in groups:
     sources = groups['--sources']
   if '--headers' in groups:
     headers = groups['--headers']
-  if sources is None and headers is None:
+  if '--defines' in groups:
+    defines = groups['--defines']
+  if sources is None and headers is None and defines is None:
     # Nothing was asked of us, don't touch the file at all
     return
   chunks = _load_chunks(preflags)
   if sources is not None:
     c = _find_chunk(chunks, 'sources')
-    for s in sources:
-      c[1].append('    %s' % s)
+    _add_to_chunk(c, sources)
   if headers is not None:
     c = _find_chunk(chunks, 'headers')
-    for h in headers:
-      c[1].append('    %s' % h)
+    _add_to_chunk(c, headers)
+  if defines is not None:
+    c = _find_chunk(chunks, 'definitions')
+    _add_to_chunk(c, ('add_definitions(-D%s)' % d for d in defines)) 
   _save_chunks(preflags, chunks)
 
 def process_cmdline(args):
