@@ -7,6 +7,9 @@ rootproject = \
 project()
 # --== proj end projectname ==--
 
+# --== proj begin definitions ==--
+# --== proj end definitions ==--
+
 # --== proj begin subdirs ==--
 # --== proj end subdirs ==--
 
@@ -26,12 +29,17 @@ project()
 add_executable(
 # --== proj begin exename ==--
 # --== proj end exename ==--
+
 # --== proj begin sources ==--
 # --== proj end sources ==--
+
 # --== proj begin headers ==--
 # --== proj end headers ==--
 )
 # --== proj end addexe ==--
+
+# --== proj begin definitions ==--
+# --== proj end definitions ==--
 
 # --== proj end executable ==--
 '''
