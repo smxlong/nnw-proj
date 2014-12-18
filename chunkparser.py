@@ -34,6 +34,9 @@ def _parse(lines, currname):
 	  raise Exception('unexpected chunk close marker \'%s\' (expected \'%s\')' % (name, currname))
 	break
     line = next(lines, None)
+
+  if line is None and currname is not None:
+    raise Exception('missing chunk close marker (expected \'%s\')' % currname)
   
   if buf:
     chunks.append(str.join('\n', buf))
@@ -45,5 +48,8 @@ def generate(chunks):
 def _gen(chunk):
   if type(chunk) == type(()):
     name = chunk[0]
-    return '# --== proj begin %s ==--\n%s\n# --== proj end %s ==--' % (name, generate(chunk[1]), name)
+    inner = generate(chunk[1])
+    if inner != '':
+      inner += '\n'
+    return '# --== proj begin %s ==--\n%s# --== proj end %s ==--' % (name, inner, name)
   return chunk

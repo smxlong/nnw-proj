@@ -67,6 +67,15 @@ input_baddata_1 = '''# --== proj begin a ==--
 # --== proj end b ==--
 '''
 
+input_baddata_2 = '''# --== proj begin a ==--
+'''
+
+# Get the templates as additional test data
+import templates
+
+input_data_template_rootproject = templates.rootproject
+input_data_template_executable = templates.executable
+
 class test_chunkparser_parse(unittest.TestCase):
   def test_empty_input(self):
     result = chunkparser.parse(input_data_emptystring)
@@ -112,12 +121,18 @@ class test_chunkparser_parse(unittest.TestCase):
     result = chunkparser.parse(input_data_proj6)
     self.assertEqual(['a', ('b', ['c', ('d', ['e'])]), 'f\n'], result)
     
+  # Test regeneration on all 'input_data_' inputs
   def test_regeneration(self):
     for name, val in globals().items():
       if name.startswith('input_data_'):
 	result = chunkparser.generate(chunkparser.parse(val))
+	#print 'EXPECTED:'
+	#print val
+	#print 'ACTUAL:'
+	#print result
 	self.assertEqual(val, result)
-	
+
+  # Test errors in bad inputs
   def test_bad(self):
     for name, val in globals().items():
       if name.startswith('input_baddata_'):
