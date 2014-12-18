@@ -1,6 +1,8 @@
 rootproject = \
 '''# This file is managed by proj.
 
+cmake_minimum_required(VERSION 3.0)
+
 # --== proj begin rootproject ==--
 
 # --== proj begin projectname ==--
@@ -18,6 +20,8 @@ project()
 
 executable = \
 '''# This file is managed by proj.
+
+cmake_minimum_required(VERSION 3.0)
 
 # --== proj begin executable ==--
 
