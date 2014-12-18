@@ -27,7 +27,7 @@ def _parse(lines, currname):
       if matchbegin:
 	name = matchbegin.group(1)
 	subchunk = _parse(lines, name)
-	chunks.append((name, subchunk))
+	chunks.append([name, subchunk])
       else:
 	name = matchend.group(1)
 	if name != currname:
@@ -46,7 +46,7 @@ def generate(chunks):
   return str.join('\n', map(_gen, chunks))
 
 def _gen(chunk):
-  if type(chunk) == type(()):
+  if type(chunk) == type([]):
     name = chunk[0]
     inner = generate(chunk[1])
     if inner != '':

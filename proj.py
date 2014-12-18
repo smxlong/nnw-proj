@@ -5,7 +5,7 @@ import optparser
 import templates
 import os
 import sys
-
+import re
 
 def usage(exitcode=0):
   print 'usage: unknown'
@@ -40,13 +40,64 @@ def _get_cmakelists(preflags):
     return 'CMakeLists.txt'
   return cmakelists
 
+def _find_chunk(chunks, name):
+  c = _find_chunk_recursive(chunks, name)
+  if c is None:
+    raise Exception('couldn\'t find \'%s\' chunk' % name)
+  return c
+  
+def _find_chunk_recursive(chunks, name):
+  for c in chunks:
+    if type(c) == type([]):
+      if c[0] == name:
+	return c
+      c = _find_chunk_recursive(c[1], name)
+      if c != None:
+	return c
+  return None
+
+def _load_chunks(preflags):
+  filename = _get_cmakelists(preflags)
+  f = open(filename, 'r')
+  data = f.read()
+  f.close()
+  return chunkparser.parse(data)
+
+def _save_chunks(preflags, chunks):
+  filename = _get_cmakelists(preflags)
+  data = chunkparser.generate(chunks)
+  f = open(filename, 'w')
+  f.write(data)
+  f.close()
+
+def _set_name(preflags, name):
+  chunks = _load_chunks(preflags)
+  namechunk = _find_chunk(chunks, 'projectname')
+  namechunk[1] = ['    project(proj_%s)' % name]
+  _save_chunks(preflags, chunks)
+
+_extract_projname = re.compile(r'\s*project\(proj_(.*)\)')
+def _get_name(chunks):
+  name = _find_chunk(chunks, 'projectname')
+  m = _extract_projname.match(name[1][0])
+  if not m:
+    raise Exception('corrupted or missing project name')
+  return m.group(1)
+
 def _init_from_template(template, preflags, groups):
+  # All things initialized from template must be given a name
+  if '--name' not in groups or groups['--name'] == []:
+    raise Exception('no name specified')
+  if len(groups['--name']) > 1:
+    raise Exception('name must be given exactly once')
+  name = groups['--name'][0]
   # To create new, we start with the template and then do an 'add'
   filename = _get_cmakelists(preflags)
   _confirm_overwrite(filename)
   f = open(filename, 'w')
   f.write(template)
   f.close()
+  _set_name(preflags, name)
   cmd_add(preflags, groups)
 
 # Command implementations.
@@ -59,9 +110,32 @@ def cmd_new_project(preflags, groups):
 
 def cmd_new_executable(preflags, groups):
   _init_from_template(templates.executable, preflags, groups)
-
+  chunks = _load_chunks(preflags)
+  name = _get_name(chunks)
+  exename = _find_chunk(chunks, 'exename')
+  exename[1] = [name]
+  _save_chunks(preflags, chunks)
+  
 def cmd_add(preflags, groups):
-  pass
+  sources = None
+  headers = None
+  if '--sources' in groups:
+    sources = groups['--sources']
+  if '--headers' in groups:
+    headers = groups['--headers']
+  if sources is None and headers is None:
+    # Nothing was asked of us, don't touch the file at all
+    return
+  chunks = _load_chunks(preflags)
+  if sources is not None:
+    c = _find_chunk(chunks, 'sources')
+    for s in sources:
+      c[1].append('    %s' % s)
+  if headers is not None:
+    c = _find_chunk(chunks, 'headers')
+    for h in headers:
+      c[1].append('    %s' % h)
+  _save_chunks(preflags, chunks)
 
 def process_cmdline(args):
   preflags, cmdwords, groups = optparser.parse(args)
@@ -89,7 +163,7 @@ def process_cmdline(args):
     usage(1)
   func(preflags, groups)
 
-try:
-  process_cmdline(sys.argv[1:])
-except Exception as e:
-  print 'ERROR: %s' % str(e)
+#try:
+process_cmdline(sys.argv[1:])
+#except Exception as e:
+#  print 'ERROR: %s' % str(e)
