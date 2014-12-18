@@ -138,28 +138,38 @@ def cmd_new_executable(preflags, groups):
   _save_chunks(preflags, chunks)
   
 def cmd_add(preflags, groups):
-  sources = None
-  headers = None
-  defines = None
+  sources = []
+  headers = []
+  defines = []
+  publicdefines = []
   if '--sources' in groups:
-    sources = groups['--sources']
+    sources += groups['--sources']
   if '--headers' in groups:
-    headers = groups['--headers']
+    headers += groups['--headers']
   if '--defines' in groups:
-    defines = groups['--defines']
-  if sources is None and headers is None and defines is None:
+    defines += groups['--defines']
+  if '--private-defines' in groups:
+    defines += groups['--private-defines']
+  if '--public-defines' in groups:
+    publicdefines += groups['--public-defines']
+  if not sources and not headers and not defines and not publicdefines:
     # Nothing was asked of us, don't touch the file at all
     return
   chunks = _load_chunks(preflags)
-  if sources is not None:
+  if sources:
     c = _find_chunk(chunks, 'sources')
     _add_to_chunk(c, sources)
-  if headers is not None:
+  if headers:
     c = _find_chunk(chunks, 'headers')
     _add_to_chunk(c, headers)
-  if defines is not None:
+  if defines:
+    name = _get_name(chunks)
     c = _find_chunk(chunks, 'definitions')
-    _add_to_chunk(c, ('add_definitions(-D%s)' % d for d in defines)) 
+    _add_to_chunk(c, ('target_compile_definitions(%s PRIVATE -D%s)' % (name, d) for d in defines)) 
+  if publicdefines:
+    name = _get_name(chunks)
+    c = _find_chunk(chunks, 'definitions')
+    _add_to_chunk(c, ('target_compile_definitions(%s PUBLIC -D%s)' % (name, d) for d in publicdefines)) 
   _save_chunks(preflags, chunks)
 
 def process_cmdline(args):
