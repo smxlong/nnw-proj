@@ -144,6 +144,30 @@ def _add_or_modify_define(chunk, target, define, kind, adding):
     # Replace chunk contents with new list
     chunk[:] = outitems
 
+_subdir = re.compile(r'\s*add_subdirectory\s*\(\s*(\S+)\s*\)\s*')
+def _add_subdir(chunk, subdir, adding):
+  if adding:
+    for i in chunk:
+      if _is_plain_chunk(i):
+	m = _subdir.match(i)
+	if m:
+	  if m.group(1) == subdir:
+	    # Already added, do not add it again
+	    return
+    chunk.append('add_subdirectory(%s)' % subdir)
+
+  else:
+    outitems = []
+    for i in chunk:
+      if _is_plain_chunk(i):
+	m = _subdir.match(i)
+	if m:
+	  if m.group(1) == subdir:
+	    # This is the one, don't add it to the output
+	    continue
+      outitems.append(i)
+    chunk[:] = outitems
+
 def _load_chunks(preflags):
   filename = _get_cmakelists(preflags)
   f = open(filename, 'r')
@@ -260,6 +284,12 @@ def _add_or_remove(preflags, groups, adding):
     c = _find_chunk(chunks, 'definitions')
     for d in interfacedefines:
       _add_or_modify_define(c[1], name, d, 'INTERFACE', adding)
+
+  # Add subdirs
+  if subdirs:
+    c = _find_chunk(chunks, 'subdirs')
+    for d in subdirs:
+      _add_subdir(c[1], d, adding)
 
   # Blow chunks
   _save_chunks(preflags, chunks)

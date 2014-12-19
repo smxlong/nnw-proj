@@ -45,6 +45,12 @@ add_executable(
 # --== proj begin definitions ==--
 # --== proj end definitions ==--
 
+# --== proj begin linklibs ==--
+# --== proj end linklibs ==--
+
+# --== proj begin subdirs ==--
+# --== proj end subdirs ==--
+
 # --== proj end executable ==--
 '''
 
@@ -74,6 +80,9 @@ add_library(
 
 # --== proj begin definitions ==--
 # --== proj end definitions ==--
+
+# --== proj begin subdirs ==--
+# --== proj end subdirs ==--
 
 # --== proj end library ==--
 '''
