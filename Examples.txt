@@ -1,0 +1,18 @@
+# The current examples are currently working:
+
+# Create a new executable from a single source file
+proj.py new executable --name hello --sources hello.cpp
+
+# Create a new executable from all source in this directory
+proj.py new executable --name hello --sources *.cpp --headers *.h
+
+# Add a define to a project
+proj.py add --defines PI=3.14159
+
+# The 'add' command can also change an existing define
+proj.py add --defines PI=3.2
+
+# Add a new source file to the project
+proj.py add --sources new.cpp
+
+# A few other things are supported as well. Read the source.
