@@ -81,7 +81,7 @@ def _add_to_chunk(chunk, items, adding):
     chunk[1] = outitems
 
 _define = re.compile(r'\s*target_compile_definitions\s*\(\s*(\S+)\s+(PUBLIC|PRIVATE|INTERFACE)\s+-D([0-9a-zA-Z_]+)(=(\S+))?\s*\)\s*')
-def _add_or_modify_define(chunk, target, define, kind):
+def _add_or_modify_define(chunk, target, define, kind, adding):
   # Split the define into name and value. Keep the = character in the value, we'll make use of it later
   eq = define.find('=')
   if eq >= 0:
@@ -90,20 +90,38 @@ def _add_or_modify_define(chunk, target, define, kind):
   else:
     name = define
     value = ''
-  # Scan the chunk looking for an existing definition of this symbol
-  for i in xrange(len(chunk)):
-    c = chunk[i]
-    if _is_plain_chunk(c):
-      m = _define.match(c)
-      if m:
-	existingtarget = m.group(1)
-	existingkind = m.group(2)
-	existingsymbol = m.group(3)
-	if existingtarget == target and existingsymbol == name and existingkind == kind:
-	  # Found it
-	  chunk[i] = 'target_compile_definitions(%s %s -D%s%s)' % (target, kind, name, value)
-	  return
-  chunk.append('target_compile_definitions(%s %s -D%s%s)' % (target, kind, name, value))
+
+  if adding:
+    # Scan the chunk looking for an existing definition of this symbol
+    for i in xrange(len(chunk)):
+      c = chunk[i]
+      if _is_plain_chunk(c):
+	m = _define.match(c)
+	if m:
+	  existingtarget = m.group(1)
+	  existingkind = m.group(2)
+	  existingsymbol = m.group(3)
+	  if existingtarget == target and existingsymbol == name and existingkind == kind:
+	    # Found it
+	    chunk[i] = 'target_compile_definitions(%s %s -D%s%s)' % (target, kind, name, value)
+	    return
+    chunk.append('target_compile_definitions(%s %s -D%s%s)' % (target, kind, name, value))
+
+  else:
+    outitems = []
+    for i in chunk:
+      if _is_plain_chunk(i):
+	m = _define.match(i)
+	if m:
+	  existingtarget = m.group(1)
+	  existingkind = m.group(2)
+	  existingsymbol = m.group(3)
+	  if existingtarget == target and existingsymbol == name and existingkind == kind:
+	    # This is the matching one, skip it
+	    continue
+      outitems.append(i)
+    # Replace chunk contents with new list
+    chunk[:] = outitems
 
 def _load_chunks(preflags):
   filename = _get_cmakelists(preflags)
@@ -190,21 +208,21 @@ def _add_or_remove(preflags, groups, adding):
     name = _get_name(chunks)
     c = _find_chunk(chunks, 'definitions')
     for d in defines:
-      _add_or_modify_define(c[1], name, d, 'PRIVATE')
+      _add_or_modify_define(c[1], name, d, 'PRIVATE', adding)
 
   # Add publicdefines
   if publicdefines:
     name = _get_name(chunks)
     c = _find_chunk(chunks, 'definitions')
     for d in publicdefines:
-      _add_or_modify_define(c[1], name, d, 'PUBLIC')
+      _add_or_modify_define(c[1], name, d, 'PUBLIC', adding)
 
   # Add interfacedefines
   if interfacedefines:
     name = _get_name(chunks)
     c = _find_chunk(chunks, 'definitions')
     for d in interfacedefines:
-      _add_or_modify_define(c[1], name, d, 'INTERFACE')
+      _add_or_modify_define(c[1], name, d, 'INTERFACE', adding)
 
   # Blow chunks
   _save_chunks(preflags, chunks)
