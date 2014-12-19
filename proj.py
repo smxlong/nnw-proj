@@ -61,18 +61,24 @@ def _is_plain_chunk(chunk):
   return type(chunk) != type([])
 
 # Safely add items to the chunk, avoiding duplicates and ignoring whitespace
-def _add_to_chunk(chunk, items, onlyonce=True):
-  if not onlyonce:
-    # Quick addition
-    chunk[1] += items
-    return
+def _add_to_chunk(chunk, items, adding):
   # Get current list of items in the chunk, stripping surrounding whitespace.
   # Use filter to ignore sub-chunks
   currentitems = map(str.strip, filter(_is_plain_chunk, chunk[1]))
-  for i in map(str.strip, items):
-    if i not in currentitems:
-      chunk[1].append(i)
-      currentitems.append(i)
+
+  if adding:
+    for i in map(str.strip, items):
+      if i not in currentitems:
+	chunk[1].append(i)
+	currentitems.append(i)
+
+  else:
+    outitems = []
+    cmpitems = map(str.strip, items)
+    for i in currentitems:
+      if i not in cmpitems:
+	outitems.append(i)
+    chunk[1] = outitems
 
 _define = re.compile(r'\s*target_compile_definitions\s*\(\s*(\S+)\s+(PUBLIC|PRIVATE|INTERFACE)\s+-D([0-9a-zA-Z_]+)(=(\S+))?\s*\)\s*')
 def _add_or_modify_define(chunk, target, define, kind):
@@ -143,22 +149,6 @@ def _init_from_template(template, preflags, groups):
   _set_name(preflags, name)
   cmd_add(preflags, groups)
 
-# Command implementations.
-
-def cmd_help(preflags, groups):
-  usage()
-
-def cmd_new_project(preflags, groups):
-  _init_from_template(templates.rootproject, preflags, groups)
-
-def cmd_new_executable(preflags, groups):
-  _init_from_template(templates.executable, preflags, groups)
-  chunks = _load_chunks(preflags)
-  name = _get_name(chunks)
-  exename = _find_chunk(chunks, 'exename')
-  exename[1] = [name]
-  _save_chunks(preflags, chunks)
-  
 # adding==True adds the information, adding==False deletes it
 def _add_or_remove(preflags, groups, adding):
   sources = []
@@ -188,12 +178,12 @@ def _add_or_remove(preflags, groups, adding):
   # Add sources
   if sources:
     c = _find_chunk(chunks, 'sources')
-    _add_to_chunk(c, sources)
+    _add_to_chunk(c, sources, adding)
 
   # Add headers
   if headers:
     c = _find_chunk(chunks, 'headers')
-    _add_to_chunk(c, headers)
+    _add_to_chunk(c, headers, adding)
 
   # Add defines
   if defines:
@@ -219,8 +209,27 @@ def _add_or_remove(preflags, groups, adding):
   # Blow chunks
   _save_chunks(preflags, chunks)
 
+# Command implementations.
+
+def cmd_help(preflags, groups):
+  usage()
+
+def cmd_new_project(preflags, groups):
+  _init_from_template(templates.rootproject, preflags, groups)
+
+def cmd_new_executable(preflags, groups):
+  _init_from_template(templates.executable, preflags, groups)
+  chunks = _load_chunks(preflags)
+  name = _get_name(chunks)
+  exename = _find_chunk(chunks, 'exename')
+  exename[1] = [name]
+  _save_chunks(preflags, chunks)
+
 def cmd_add(preflags, groups):
   _add_or_remove(preflags, groups, True)
+
+def cmd_remove(preflags, groups):
+  _add_or_remove(preflags, groups, False)
 
 def process_cmdline(args):
   preflags, cmdwords, groups = optparser.parse(args)
