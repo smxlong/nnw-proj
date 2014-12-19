@@ -12,9 +12,10 @@ def usage(exitcode=0):
   print \
 '''Possible commands:
 
-  new [rootproject | executable]
+  new [rootproject | executable | library]
   add
   remove
+
 Usage examples:
 
 Create an executable project from all source files in the current directory
