@@ -60,9 +60,6 @@ def _find_chunk_recursive(chunks, name):
 def _is_plain_chunk(chunk):
   return type(chunk) != type([])
 
-def _split_nl(data):
-  return data.split('\n')
-
 # Safely add items to the chunk, avoiding duplicates and ignoring whitespace
 def _add_to_chunk(chunk, items, onlyonce=True):
   if not onlyonce:
@@ -71,11 +68,36 @@ def _add_to_chunk(chunk, items, onlyonce=True):
     return
   # Get current list of items in the chunk, stripping surrounding whitespace.
   # Use filter to ignore sub-chunks
-  currentitems = map(str.strip, itertools.chain(*map(_split_nl, filter(_is_plain_chunk, chunk[1]))))
+  currentitems = map(str.strip, filter(_is_plain_chunk, chunk[1]))
   for i in map(str.strip, items):
     if i not in currentitems:
       chunk[1].append(i)
       currentitems.append(i)
+
+_define = re.compile(r'\s*target_compile_definitions\s*\(\s*(\S+)\s+(PUBLIC|PRIVATE|INTERFACE)\s+-D([0-9a-zA-Z_]+)(=(\S+))?\s*\)\s*')
+def _add_or_modify_define(chunk, target, define, kind):
+  # Split the define into name and value. Keep the = character in the value, we'll make use of it later
+  eq = define.find('=')
+  if eq >= 0:
+    name = define[:eq]
+    value = define[eq:]
+  else:
+    name = define
+    value = ''
+  # Scan the chunk looking for an existing definition of this symbol
+  for i in xrange(len(chunk)):
+    c = chunk[i]
+    if _is_plain_chunk(c):
+      m = _define.match(c)
+      if m:
+	existingtarget = m.group(1)
+	existingkind = m.group(2)
+	existingsymbol = m.group(3)
+	if existingtarget == target and existingsymbol == name and existingkind == kind:
+	  # Found it
+	  chunk[i] = 'target_compile_definitions(%s %s -D%s%s)' % (target, kind, name, value)
+	  return
+  chunk.append('target_compile_definitions(%s %s -D%s%s)' % (target, kind, name, value))
 
 def _load_chunks(preflags):
   filename = _get_cmakelists(preflags)
@@ -94,7 +116,7 @@ def _save_chunks(preflags, chunks):
 def _set_name(preflags, name):
   chunks = _load_chunks(preflags)
   namechunk = _find_chunk(chunks, 'projectname')
-  namechunk[1] = ['    project(proj_%s)' % name]
+  namechunk[1] = ['project(proj_%s)' % name]
   _save_chunks(preflags, chunks)
 
 _extract_projname = re.compile(r'\s*project\(proj_(.*)\)')
@@ -165,11 +187,13 @@ def cmd_add(preflags, groups):
   if defines:
     name = _get_name(chunks)
     c = _find_chunk(chunks, 'definitions')
-    _add_to_chunk(c, ('target_compile_definitions(%s PRIVATE -D%s)' % (name, d) for d in defines)) 
+    for d in defines:
+      _add_or_modify_define(c[1], name, d, 'PRIVATE')
   if publicdefines:
     name = _get_name(chunks)
     c = _find_chunk(chunks, 'definitions')
-    _add_to_chunk(c, ('target_compile_definitions(%s PUBLIC -D%s)' % (name, d) for d in publicdefines)) 
+    for d in defines:
+      _add_or_modify_define(c[1], name, d, 'PUBLIC')
   _save_chunks(preflags, chunks)
 
 def process_cmdline(args):
