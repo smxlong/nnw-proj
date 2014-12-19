@@ -159,11 +159,13 @@ def cmd_new_executable(preflags, groups):
   exename[1] = [name]
   _save_chunks(preflags, chunks)
   
-def cmd_add(preflags, groups):
+# adding==True adds the information, adding==False deletes it
+def _add_or_remove(preflags, groups, adding):
   sources = []
   headers = []
   defines = []
   publicdefines = []
+  interfacedefines = []
   if '--sources' in groups:
     sources += groups['--sources']
   if '--headers' in groups:
@@ -174,27 +176,51 @@ def cmd_add(preflags, groups):
     defines += groups['--private-defines']
   if '--public-defines' in groups:
     publicdefines += groups['--public-defines']
-  if not sources and not headers and not defines and not publicdefines:
+  if '--interface-defines' in groups:
+    interfacedefines += groups['--interface-defines']
+  if not sources and not headers and not defines and not publicdefines and not interfacedefines:
     # Nothing was asked of us, don't touch the file at all
     return
+
+  # Load in the chunks
   chunks = _load_chunks(preflags)
+
+  # Add sources
   if sources:
     c = _find_chunk(chunks, 'sources')
     _add_to_chunk(c, sources)
+
+  # Add headers
   if headers:
     c = _find_chunk(chunks, 'headers')
     _add_to_chunk(c, headers)
+
+  # Add defines
   if defines:
     name = _get_name(chunks)
     c = _find_chunk(chunks, 'definitions')
     for d in defines:
       _add_or_modify_define(c[1], name, d, 'PRIVATE')
+
+  # Add publicdefines
   if publicdefines:
     name = _get_name(chunks)
     c = _find_chunk(chunks, 'definitions')
-    for d in defines:
+    for d in publicdefines:
       _add_or_modify_define(c[1], name, d, 'PUBLIC')
+
+  # Add interfacedefines
+  if interfacedefines:
+    name = _get_name(chunks)
+    c = _find_chunk(chunks, 'definitions')
+    for d in interfacedefines:
+      _add_or_modify_define(c[1], name, d, 'INTERFACE')
+
+  # Blow chunks
   _save_chunks(preflags, chunks)
+
+def cmd_add(preflags, groups):
+  _add_or_remove(preflags, groups, True)
 
 def process_cmdline(args):
   preflags, cmdwords, groups = optparser.parse(args)
