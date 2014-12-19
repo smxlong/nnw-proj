@@ -9,7 +9,28 @@ import re
 import itertools
 
 def usage(exitcode=0):
-  print 'usage: unknown'
+  print \
+'''Possible commands:
+
+  new [rootproject | executable]
+  add
+  remove
+Usage examples:
+
+Create an executable project from all source files in the current directory
+  proj.py new executable --name hello --sources *.cpp --headers *.h
+
+Add things to a project
+  proj.py add --sources another.cpp
+  proj.py add --headers another.h
+  proj.py add --defines MAX_CLIENTS=32
+
+Remove things from a project
+  proj.py remove --sources bad.cpp
+  proj.py remove --headers bad.h
+  proj.py remove --defines MAX_CLIENTS
+
+For more detailed help, consult the manual.'''
   sys.exit(exitcode)
 
 # Internal functions
@@ -151,6 +172,16 @@ def _get_name(chunks):
     raise Exception('corrupted or missing project name')
   return m.group(1)
 
+def _get_type(chunks):
+  possibilities = ['rootproject', 'executable', 'library']
+  for p in possibilities:
+    try:
+      _find_chunk(chunks, p)
+      return p
+    except:
+      pass
+  raise Exception('project doesn\'t seem to be managed by proj')
+
 def _init_from_template(template, preflags, groups):
   # All things initialized from template must be given a name
   if '--name' not in groups or groups['--name'] == []:
@@ -174,6 +205,7 @@ def _add_or_remove(preflags, groups, adding):
   defines = []
   publicdefines = []
   interfacedefines = []
+  subdirs = []
   if '--sources' in groups:
     sources += groups['--sources']
   if '--headers' in groups:
@@ -186,12 +218,17 @@ def _add_or_remove(preflags, groups, adding):
     publicdefines += groups['--public-defines']
   if '--interface-defines' in groups:
     interfacedefines += groups['--interface-defines']
-  if not sources and not headers and not defines and not publicdefines and not interfacedefines:
-    # Nothing was asked of us, don't touch the file at all
-    return
+  if '--subdirs' in groups:
+    subdirs += groups['--subdirs']
 
   # Load in the chunks
   chunks = _load_chunks(preflags)
+
+  # Do some sanity checking based on project type
+  projtype = _get_type(chunks)
+  if projtype == 'rootproject':
+    if sources or headers:
+      raise Exception('sources and headers can\'t be added to a rootproject')
 
   # Add sources
   if sources:
@@ -232,7 +269,7 @@ def _add_or_remove(preflags, groups, adding):
 def cmd_help(preflags, groups):
   usage()
 
-def cmd_new_project(preflags, groups):
+def cmd_new_rootproject(preflags, groups):
   _init_from_template(templates.rootproject, preflags, groups)
 
 def cmd_new_executable(preflags, groups):
@@ -241,6 +278,14 @@ def cmd_new_executable(preflags, groups):
   name = _get_name(chunks)
   exename = _find_chunk(chunks, 'exename')
   exename[1] = [name]
+  _save_chunks(preflags, chunks)
+
+def cmd_new_library(preflags, groups):
+  _init_from_template(templates.library, preflags, groups)
+  chunks = _load_chunks(preflags)
+  name = _get_name(chunks)
+  libname = _find_chunk(chunks, 'libname')
+  libname[1] = [name]
   _save_chunks(preflags, chunks)
 
 def cmd_add(preflags, groups):

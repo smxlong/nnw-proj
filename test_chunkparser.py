@@ -75,6 +75,7 @@ import templates
 
 input_data_template_rootproject = templates.rootproject
 input_data_template_executable = templates.executable
+input_data_template_library = templates.library
 
 class test_chunkparser_parse(unittest.TestCase):
   def test_empty_input(self):
