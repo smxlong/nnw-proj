@@ -22,7 +22,7 @@ def _parse(lines, currname):
       buf.append(line)
     else:
       if buf:
-	chunks.append(str.join('\n', buf))
+	chunks += buf
 	buf = []
       if matchbegin:
 	name = matchbegin.group(1)
@@ -39,7 +39,7 @@ def _parse(lines, currname):
     raise Exception('missing chunk close marker (expected \'%s\')' % currname)
   
   if buf:
-    chunks.append(str.join('\n', buf))
+    chunks += buf
   return chunks
 
 def generate(chunks):
