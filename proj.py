@@ -169,6 +169,36 @@ def _add_subdir(chunk, subdir, adding):
       outitems.append(i)
     chunk[:] = outitems
 
+_linklib = re.compile(r'\s*target_link_libraries\s*\(\s*(\S+)\s+(debug|optimized|general)\s+(\S+)\s*\)\s*')
+def _add_lib(chunk, target, lib, kind, adding):
+  if adding:
+    for i in chunk:
+      if _is_plain_chunk(i):
+	m = _linklib.match(i)
+	if m:
+	  existingtarget = m.group(1)
+	  existingkind = m.group(2)
+	  existinglib = m.group(3)
+	  if existingtarget == target and existingkind == kind and existinglib == lib:
+	    # Already added, do not add it again
+	    return
+    chunk.append('target_link_libraries(%s %s %s)' % (target, kind, lib))
+
+  else:
+    outitems = []
+    for i in chunk:
+      if _is_plain_chunk(i):
+	m = _linklib.match(i)
+	if m:
+	  existingtarget = m.group(1)
+	  existingkind = m.group(2)
+	  existinglib = m.group(3)
+	  if existingtarget == target and existingkind == kind and existinglib == lib:
+	    # This is the one, don't add it to the output
+	    continue
+      outitems.append(i)
+    chunk[:] = outitems
+
 def _load_chunks(preflags):
   filename = _get_cmakelists(preflags)
   f = open(filename, 'r')
@@ -231,6 +261,7 @@ def _add_or_remove(preflags, groups, adding):
   publicdefines = []
   interfacedefines = []
   subdirs = []
+  libs = []
   if '--sources' in groups:
     sources += groups['--sources']
   if '--headers' in groups:
@@ -245,6 +276,8 @@ def _add_or_remove(preflags, groups, adding):
     interfacedefines += groups['--interface-defines']
   if '--subdirs' in groups:
     subdirs += groups['--subdirs']
+  if '--libs' in groups:
+    libs += groups['--libs']
 
   # Load in the chunks
   chunks = _load_chunks(preflags)
@@ -291,6 +324,13 @@ def _add_or_remove(preflags, groups, adding):
     c = _find_chunk(chunks, 'subdirs')
     for d in subdirs:
       _add_subdir(c[1], d, adding)
+
+  # Add libs
+  if libs:
+    name = _get_name(chunks)
+    c = _find_chunk(chunks, 'linklibs')
+    for l in libs:
+      _add_lib(c[1], name, l, 'general', adding)
 
   # Blow chunks
   _save_chunks(preflags, chunks)

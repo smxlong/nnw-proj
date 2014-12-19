@@ -84,5 +84,8 @@ add_library(
 # --== proj begin subdirs ==--
 # --== proj end subdirs ==--
 
+# --== proj begin exports ==--
+# --== proj end exports ==--
+
 # --== proj end library ==--
 '''
