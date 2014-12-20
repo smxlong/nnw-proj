@@ -357,6 +357,8 @@ def cmd_new_library(preflags, groups):
   name = _get_name(chunks)
   libname = _find_chunk(chunks, 'libname')
   libname[1] = [name]
+  exports = _find_chunk(chunks, 'exports')
+  exports[1] = ['target_include_directories(%s INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})' % name]
   _save_chunks(preflags, chunks)
 
 def cmd_add(preflags, groups):
@@ -391,7 +393,8 @@ def process_cmdline(args):
     usage(1)
   func(preflags, groups)
 
-#try:
-process_cmdline(sys.argv[1:])
-#except Exception as e:
-#  print 'ERROR: %s' % str(e)
+try:
+  process_cmdline(sys.argv[1:])
+except Exception as e:
+  print 'ERROR: %s' % str(e)
+  sys.exit(1)
